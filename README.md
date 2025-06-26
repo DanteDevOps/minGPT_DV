@@ -145,3 +145,135 @@ Papers + some implementation notes:
 ### License
 
 MIT
+
+
+
+
+/***************************************************************************************************
+ * Webport HMI Read-Write Script for VASyd Water Meter REST API
+ * * Version: 1.0
+ * Author: Gemini (as Expert JavaScript Developer)
+ * Date: 2025-06-26
+ *
+ * Description:
+ * This script is designed for the Kiona Webport DrvREST driver to communicate with the
+ * VASyd water meter REST API. It performs the following actions:
+ * 1.  Pre-processes a read request by adding the necessary HTTP headers, including
+ * the API key and a dynamic date range (today and yesterday).
+ * 2.  Post-processes the response by parsing the JSON data and extracting the 'value' 
+ * of the last entry in the 'values' array.
+ *
+ * How to use in Webport:
+ * 1.  Create an IO-device with the type "DrvREST".
+ * 2.  Set the "Base URL" to: https://api.vasyd.se/wm/v1/data/
+ * 3.  For "Authentication", select "None". The script handles the API key via headers.
+ * 4.  Create a new Tag.
+ * 5.  In the Tag's "Address" field, you will call this script. The format is:
+ * `any_parameter{rwscript#SCRIPT_NAME}`
+ * For example, if you save this script as "GetWaterMeterValue", the address would be:
+ * `water_meter{rwscript#GetWaterMeterValue}`
+ * The 'water_meter' part is just a placeholder and is not used by the script itself.
+ ***************************************************************************************************/
+
+/**
+ * @function preprocessread
+ * @description Prepares the GET request before it is sent to the API.
+ * It constructs a request object with the correct URL, HTTP method, and custom headers.
+ * @returns {string} A JSON string representing the request object.
+ */
+function preprocessread() {
+
+    // --- 1. Define Request Parameters ---
+    // The base URL is automatically inherited from the IO-device settings.
+    var urlAddress = baseurl; 
+    var httpMethod = "get";
+
+    // --- 2. Create HTTP Headers ---
+    var headers = new Newtonsoft.Json.Linq.JObject();
+    
+    // IMPORTANT: Replace "yourApiKeyHere" with your actual API key.
+    headers.Add(new Newtonsoft.Json.Linq.JProperty("api-key", "yourApiKeyHere"));
+    
+    // Set the date range for the API call. 
+    // We will request data from the beginning of yesterday to the end of today
+    // to ensure we always get the latest reading.
+    var today = System.DateTime.Today;
+    var yesterday = today.AddDays(-1);
+    headers.Add(new Newtonsoft.Json.Linq.JProperty("start-date", yesterday.ToString("yyyy-MM-dd")));
+    headers.Add(new Newtonsoft.Json.Linq.JProperty("end-date", today.ToString("yyyy-MM-dd")));
+
+    // --- 3. Construct the Full Request Object ---
+    var request = new Newtonsoft.Json.Linq.JObject();
+    // The 'url' property is optional if you are using the baseurl from the IO-device directly.
+    request.Add(new Newtonsoft.Json.Linq.JProperty("url", urlAddress)); 
+    request.Add(new Newtonsoft.Json.Linq.JProperty("httpMethod", httpMethod));
+    request.Add(new Newtonsoft.Json.Linq.JProperty("headers", headers));
+    // No query string or body is needed for this specific GET request.
+
+    // For debugging, you can print the request object to the Webport log.
+    // debug(request.ToString());
+
+    // Return the request object as a JSON formatted string.
+    return request.ToString();
+}
+
+/**
+ * @function postprocessread
+ * @description Processes the response received from the API.
+ * It parses the JSON response, finds the last data point, and extracts its value.
+ * @returns {string} The latest water meter value as a string, or an empty string if not found.
+ */
+function postprocessread() {
+    var value = ""; // Default return value
+
+    try {
+        // The raw response from the server is in the 'data' variable.
+        // We parse it into a Newtonsoft.Json JObject.
+        var jsonResponse = Newtonsoft.Json.Linq.JObject.Parse(data);
+
+        // Use SelectToken to find the 'values' array within the JSON response.
+        var valuesArray = jsonResponse.SelectToken("values");
+
+        // Check if the 'values' array exists and contains items.
+        // The 'HasValues' property is a convenient way to check if a JContainer (like JArray) is not empty.
+        if (valuesArray != null && valuesArray.HasValues) {
+            
+            // Get the last object in the 'values' array.
+            var lastEntry = valuesArray.Last;
+
+            // From the last entry, select the 'value' field.
+            var meterValueToken = lastEntry.SelectToken("value");
+
+            if (meterValueToken != null) {
+                // If the value is found, convert it to a string.
+                value = meterValueToken.ToString();
+            } else {
+                // Log if the 'value' field is missing in the last entry.
+                debug("Error: 'value' field not found in the last data entry.");
+            }
+        } else {
+            // Log if the 'values' array is missing or empty.
+            debug("Error: 'values' array not found or is empty in API response.");
+        }
+    } catch (e) {
+        // Log any exceptions that occur during parsing.
+        debug("An exception occurred in postprocessread: " + e.message);
+    }
+    
+    // Return the extracted value. The tag in Webport will display this.
+    return value;
+}
+
+
+// --- Write functions are not required for this task, so they are left empty. ---
+
+function preprocesswrite() {
+    // This function would prepare a request to write data to the API.
+    return null; 
+}
+
+function postprocesswrite() {
+    // This function would handle the response after a write operation.
+    return false;
+}
+
