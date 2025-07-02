@@ -344,5 +344,67 @@ function postprocesswrite() {
 
 
 
+--------------------------------
+
+
+function preprocessread() {
+
+    var urlAddress = baseurl; 
+    var httpMethod = "get";
+    var headers = new Newtonsoft.Json.Linq.JObject();
+
+    headers.Add(new Newtonsoft.Json.Linq.JProperty("api-key", "kHK4d0RovYefzr-ns3d1Fw"));
+    
+    var today = System.DateTime.Today;
+    var yesterday = today.AddDays(-1);
+    headers.Add(new Newtonsoft.Json.Linq.JProperty("start-date", yesterday.ToString("yyyy-MM-dd")));
+    headers.Add(new Newtonsoft.Json.Linq.JProperty("end-date", today.ToString("yyyy-MM-dd")));
+
+    var request = new Newtonsoft.Json.Linq.JObject();
+    request.Add(new Newtonsoft.Json.Linq.JProperty("url", urlAddress)); 
+    request.Add(new Newtonsoft.Json.Linq.JProperty("httpMethod", httpMethod));
+    request.Add(new Newtonsoft.Json.Linq.JProperty("headers", headers));
+
+    return request.ToString();
+}
+
+function postprocessread() {
+    var value = "";
+
+    try {
+        var jsonResponse = Newtonsoft.Json.Linq.JObject.Parse(data);
+        var valuesArray = jsonResponse.SelectToken("values");
+
+        if (valuesArray != null && valuesArray.HasValues) {
+
+            var lastEntry = valuesArray.Last;
+            var meterValueToken = lastEntry.SelectToken("value");
+
+            if (meterValueToken != null) {
+                value = meterValueToken.ToString();
+            } else {
+                debug("Error: 'value' field not found in the last data entry.");
+            }
+        } else {
+            debug("Error: 'values' array not found or is empty in API response.");
+        }
+    } catch (e) {
+        debug("An exception occurred in postprocessread: " + e.message);
+    }
+    
+    return value;
+}
+
+function preprocesswrite() {
+    return null; 
+}
+
+function postprocesswrite() {
+    return false;
+}
+
+
+
+
 
 
