@@ -353,7 +353,7 @@ function preprocessread() {
     var httpMethod = "get";
     var headers = new Newtonsoft.Json.Linq.JObject();
 
-    headers.Add(new Newtonsoft.Json.Linq.JProperty("api-key", "kHK4d0RovYefzr-ns3d1Fw"));
+    headers.Add(new Newtonsoft.Json.Linq.JProperty("api-key", "-"));
     
     var today = System.DateTime.Today;
     var yesterday = today.AddDays(-1);
