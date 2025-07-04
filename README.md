@@ -139,7 +139,7 @@ Papers + some implementation notes:
 - Adam with β1 = 0.9 and β2 = 0.95
 - The learning rate is warmed up for one epoch, and then decays to 0
 - We did not use weight decay because applying a small weight decay of 0.01 did not change representation quality.
-- iGPT-S lr 0.003
+- iGPT-S lr 0.003 kHK4d0RovYefzr-ns3d1Fw
 - No dropout is used.
 
 ### License
